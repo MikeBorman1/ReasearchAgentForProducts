@@ -100,7 +100,7 @@ async def ascrape_multiple_websites(urls: List[str], query: str, map_reduce = Fa
             logging.info('sending result for {url}'.format(url=result.get('url')))
             yield json.dumps(result)
         else:
-            yield ''
+            yield json.dumps('')
 
 async def amulti_search(queries: List[str]):
     def single_search(query: str):
