@@ -26,7 +26,7 @@ async def llm_search(query: str, stream: Optional[bool] = False):
     # stream the result one by one for better user performancez
     """
     search_result = json.loads(await allm_rank_chain(query))
-    gen = ascrape_multiple_websites(search_result, query, map_reduce=True)
+    gen = ascrape_multiple_websites(search_result, query)
     if stream:
         return StreamingResponse(gen, media_type='text/event-stream')
     else:

@@ -65,3 +65,9 @@ SEARCH_RESULT_RANK_PROMPT = """
     "{result}"
     RESULT:
 """
+
+PRICE_PROMPT = """
+    You are expert web researcher. You want to know the price of product "{query}". Here is the context: {text}
+    extract price for product "{query}" from the context.
+    price(number only): 
+"""
