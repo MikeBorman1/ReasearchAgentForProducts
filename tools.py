@@ -14,6 +14,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 import constants
 from prompts import (
     EXTRACT_PROMPT,
+    PRICE_PROMPT,
     MAP_PROMPT,
     REDUCE_PROMPT,
     SEARCH_QUERY_PROMPT,
@@ -21,9 +22,7 @@ from prompts import (
 )
 
 
-def scrape(
-    url: str, query: str, extraction_chain: LLMChain, map_reduce_chain, map_reduce=False
-):
+def scrape(url: str, query: str, extraction_chain: LLMChain, price_chain: LLMChain):
     logging.info(f"scraping {url}")
     post_url = (
         f"https://chrome.browserless.io/content?token={constants.BROWSERLESS_API_KEY}"
@@ -44,50 +43,32 @@ def scrape(
         text = soup.get_text()
         logging.debug(f"raw website: {text}")
 
-        if len(text) > 20000 and map_reduce:
-            text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=10000, chunk_overlap=50
-            )
-            chunks = text_splitter.create_documents([text])
-
-            # running this map_reduce concurrently to call gpt api would be nice to have
-            output = map_reduce_chain.run(chunks)
-            logging.debug(f"extraction with mapreduce: {output}")
-            return {"description": output, "url": url, "reduced": True}
-        else:
-            output = extraction_chain.run(text=text[:20000], query=query)
-            logging.debug(f"extraction with cutoff: {output}")
-            return {"description": output, "url": url, "reduced": False}
+        output = extraction_chain.run(text=text, query=query)
+        price = price_chain.run(text=text, query=query)
+        return {"description": output, "price": price, "url": url, "reduced": False}
     else:
         print(f"Status: {response.status_code}, content: {response.content}")
 
 
-async def ascrape_multiple_websites(urls: List[str], query: str, map_reduce=False):
+async def ascrape_multiple_websites(urls: List[str], query: str):
     """
     loop throught urls, call browser to get render html, parse using bs and extract with openAI
     all are done concurrently and stream the result back to the client as it is done.
     """
-    llm = ChatOpenAI(
-        temperature=0, model="gpt-3.5-turbo-16k", api_key=constants.OPENAI_API_KEY
-    )
-
-    extract_prompt_template = PromptTemplate(
-        template=EXTRACT_PROMPT, input_variables=["query", "text"]
-    )
+    llm = ChatOpenAI(temperature=0, model="gpt-4o", api_key=constants.OPENAI_API_KEY)
 
     extraction_chain = LLMChain(
         llm=llm,
-        prompt=extract_prompt_template,
+        prompt=PromptTemplate(
+            template=EXTRACT_PROMPT, input_variables=["query", "text"]
+        ),
         verbose=False,
     )
-    map_reduce_chain = load_summarize_chain(
+
+    price_chain = LLMChain(
         llm=llm,
-        chain_type="map_reduce",
+        prompt=PromptTemplate(template=PRICE_PROMPT, input_variables=["query", "text"]),
         verbose=False,
-        map_prompt=PromptTemplate(
-            template=MAP_PROMPT, input_variables=["text", "query"]
-        ).partial(query=query),
-        combine_prompt=PromptTemplate(template=REDUCE_PROMPT, input_variables=["text"]),
     )
 
     def request(url):
@@ -95,8 +76,7 @@ async def ascrape_multiple_websites(urls: List[str], query: str, map_reduce=Fals
             url=url,
             query=query,
             extraction_chain=extraction_chain,
-            map_reduce_chain=map_reduce_chain,
-            map_reduce=map_reduce,
+            price_chain=price_chain,
         )
 
     loop = asyncio.get_event_loop()

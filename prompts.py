@@ -61,7 +61,7 @@ SEARCH_RESULT_RANK_PROMPT = """
     You have search result from the google which include mata data of the website and its link.
     Your object is to pick top {top_k} relevent website link from the result that will describe product {query} the most.
     Do not pick same domain twice. If the domain are the same, pick the most relevent website.
-    Here is the search result. Format the output as JSON string array of website link.
+    Here is the search result. Format the output as JSON string array of website link. eg. ["https://example.com", "https://example2.com"]
     "{result}"
     RESULT:
 """
