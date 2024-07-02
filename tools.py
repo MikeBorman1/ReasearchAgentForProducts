@@ -55,7 +55,7 @@ async def ascrape_multiple_websites(urls: List[str], query: str):
     loop throught urls, call browser to get render html, parse using bs and extract with openAI
     all are done concurrently and stream the result back to the client as it is done.
     """
-    llm = ChatOpenAI(temperature=0, model="gpt-4o", api_key=constants.OPENAI_API_KEY)
+    llm = ChatOpenAI(temperature=0, model="gpt-4-turbo", api_key=constants.OPENAI_API_KEY)
 
     extraction_chain = LLMChain(
         llm=llm,
